@@ -1,0 +1,7 @@
+{
+    "FIRST_RUN": false,
+    "PNAME": "Bandcamp file wrangler",
+    "PUSAGE": "\nThis program can be used to wrangle \nbatches of Bandcamp files, adding ID3 Tags\n based on discogs searches and\n reorganising files into a nicer file structure.",
+    "DTFORMAT": "%Y/%m/%d %H:%M:%S",
+    "SESHEND": "2025/02/15 10:28:00"
+}
