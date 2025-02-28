@@ -23,13 +23,13 @@ with
 			total_time,
 			kind
 		from
-			itunes.library_tracks
+			library_tracks
 	),
 	dj_playlists as ( -- List of all DJ Playlists
 		select 
-			playlist_id, name
+			playlist_id
 		from 
-			itunes.playlists p 
+			playlists p 
 		where 
 			p.name not in (
 				'Library', 'Downloaded',
@@ -42,12 +42,12 @@ with
 	),
 	dj_plist_tracks as ( -- All Tracks in DJ Playlists excluding AIFF, purchased, and Apple music files
 		select distinct
-			dpl.playlist_id, ptm.track_id,
+			ptm.track_id,
 			lt.artist, lt.album, 
 			lt.name, lt.track_number, 
-			lt.location, lt.total_time, lt.kind
+			lt.location, lt.total_time
 		from 
-			itunes.playlist_track_mapping ptm 
+			playlist_track_mapping ptm 
 		left join 
 			dj_playlists dpl
 		on
@@ -57,16 +57,15 @@ with
 		on
 			ptm.track_id = lt.track_id
 		where 
-			lt.name = 'Howl' 
-		/*	lt.track_id is not null
+			dpl.playlist_id is not null
 		and 
 			/* filter out Apple music and Purchased tracks */
 			lt.kind not in (
 				'Purchased AAC audio file', 
 				'Apple Music AAC audio file', 
 				'AIFF audio file'
-			)*/	
-	)/*,
+			)	
+	),
 	aifs as ( -- aif tracks in library with Bandcamp filename
 		select 
 			track_id, artist, 
@@ -194,9 +193,15 @@ with
 		union all
 		select * from bcamp_matches -- 130
 	)
-/*select distinct
-	track_id, aif_id, *
+select distinct
+	ptm.playlist_id, tm.track_id, tm.aif_id
 from
-	total_matches;
-*/*/
-select * from dj_plist_tracks l;
+	total_matches tm
+left join
+	playlist_track_mapping ptm
+on
+	ptm.track_id = tm.track_id
+where
+	tm.track_id is not null;
+
+--select * from dj_plist_tracks;

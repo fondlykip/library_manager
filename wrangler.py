@@ -2,10 +2,10 @@ import argparse
 import json
 import logging
 from pathlib import Path
-from helpers import file_helpers as f_help
-from helpers import user_io
-from helpers import library_utils
-from config import SYS_VARS, USER_VARS, config_utils
+from src.helpers import file_helpers as f_help
+from src.helpers import user_io
+from src.helpers import library_utils
+from src.config import SYS_VARS, USER_VARS, config_utils
 
 
 def start_up():

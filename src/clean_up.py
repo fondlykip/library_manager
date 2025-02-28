@@ -1,9 +1,9 @@
 import helpers
-from helpers import tag_utils
+from src.helpers import tag_utils
 from pathlib import Path
 import shutil
-from helpers import file_helpers as f_help
-from bandcamp_file_worker.src.helpers.itunes_utils import ITunesLibrary
+from src.helpers import file_helpers as f_help
+from src.helpers.itunes_utils import ITunesLibrary
 import json
 from struct import unpack
 

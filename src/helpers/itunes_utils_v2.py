@@ -4,8 +4,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 import logging
-from config.config import COMMON_XML_PATH
-from helpers import utils
+from src.config.config import COMMON_XML_PATH
+from src.helpers import utils
 import copy
 from win32com import client as com_client
 import pandas as pd
@@ -14,10 +14,8 @@ from typing import List
 
 
 class ITunesLibrary():
-    def __init__(self, library_xml_loc: str = "C:\\Users\\liamj\\Music\\iTunes\\iTunes Music Library.xml"):
-        self.library_xml_loc = Path(library_xml_loc)
-        self.library_data_path = Path("C:\\Users\\liamj\\Music\\iTunes")
-        self.library_dict = self.parse_xml(self.library_xml_loc)
+    def __init__(self):
+        self.media_locations = []
         self.skip_playlists = [
                                 'Library',
                                 'Downloaded',
@@ -33,13 +31,10 @@ class ITunesLibrary():
                                 'zzzzz Dumping ground pre 2025'
                             ]
         self.itunes = com_client.Dispatch("iTunes.Application")
-        self.library_tracks = pd.DataFrame
-        self.lt_cols = self.library_tracks.columns.to_list()
-        self.playlists = pd.DataFrame
-        self.pl_cols = self.playlists.columns.to_list()
-        self.playlist_track_mapping = pd.DataFrame
-        self.ptm_cols = self.playlist_track_mapping.columns.to_list()
-        self.matches = pd.DataFrame
+        self.library_tracks = None
+        self.playlists = None
+        self.playlist_track_mapping = None
+        self.matches = None
 
 
     def get_library_dfs(self) -> List[pd.DataFrame]:
@@ -53,7 +48,7 @@ class ITunesLibrary():
             track = tracks.Item(i)
             try:    
                 track_dict = {
-                    'track_id': track.trackID,
+                    'track_id': track.TrackDatabaseID,
                     'name': track.Name,
                     'artist': track.Artist,
                     'album': track.Album,
@@ -66,7 +61,7 @@ class ITunesLibrary():
             except:
                 continue
         self.library_tracks = pd.DataFrame(track_data)
-        self.lt_cols = list(self.library_tracks.columns())
+        print("library tracks created")
 
         plist_mappings = []
         playlist_data = []
@@ -84,15 +79,15 @@ class ITunesLibrary():
                 plist_track = plist_tracks.Item(i)
                 plist_mapping = {
                     'playlist_id': plist_id,
-                    'track_id': plist_track.trackID
+                    'plist_name': playlist.Name,
+                    'track_id': plist_track.TrackDatabaseID,
+                    'track_name': plist_track.Name
                 }
                 plist_mappings.append(plist_mapping)
 
         self.playlists = pd.DataFrame(playlist_data)
-        self.pl_cols = list(self.playlists.columns)
-
         self.playlist_track_mapping = pd.DataFrame(plist_mappings)
-        self.ptm_cols = list(self.playlist_track_mapping.columns())
+        print("playlist and track mapping created")
         return True
 
 
@@ -100,18 +95,42 @@ class ITunesLibrary():
             library_tracks = self.library_tracks
             playlists = self.playlists
             playlist_track_mapping = self.playlist_track_mapping
-            with open('./matching_sql.sql', 'r') as f:
+            with open('./src/sql/matching_ddb.sql', 'r') as f:
                 query = f.read()
-            clean_query = query.replace("itunes.", "")
-            print(clean_query)
-            self.matches = duckdb.query(clean_query).to_df()
+            #print(query)
+            self.matches = duckdb.query(query).to_df()
             return len(self.matches.index)
 
 
     def export_csvs(self, output_path: Path):
         file_timestamp = datetime.now().strftime("%Y%m%d%H%M")
         export_list = [
-            self.library_tracks, self.playlists, self.playlist_track_mapping,
-            self.
+            (k, var)\
+             for k, var in self.__dict__.items()\
+             if type(var) == type(pd.DataFrame())
         ]
-        self.library_tracks.to_csv(Path / f'library_tracks-{file_timestamp}.csv')
+        for key, df in export_list:
+            if df.shape[0] > 0:
+                file_name = f'{key}-{file_timestamp}.csv'
+                print(f"save {key} to {file_name}")
+                df.to_csv(f"./{file_name}", index=False)
+
+
+    def get_media_locations(self):
+        tracks = self.itunes.LibrarySource.Tracks
+        print(tracks.Count)
+
+    def replace_matches(self):
+        for idx, match in self.matches.iterrows():
+            print(f"playlist ID: {match['playlist_id']}")
+            plist = self.itunes.GetITObjectByID(None,
+                                                match['playlist_id'],
+                                                None, None)
+            new_track = self.itunes.GetITObjectByID(None, None, None,
+                                                    match['aif_id'])
+            print(f"name: {plist.Name}")
+            print(f"new track: {new_track.Name}")
+
+            #       plist = self.itunes.GetITObjectByID(None,
+            #       File "<COMObject iTunes.Application>", line 2, in GetITObjectByID
+            #       TypeError: int() argument must be a string, a bytes-like object or a number, not 'NoneType'
