@@ -21,15 +21,18 @@ with
 			right(CONCAT('00', cast(track_number as VARCHAR)), 2) as track_number,
 			location,
 			total_time,
-			kind
+			kind,
+			source_id,
+			playlist_id,
+			track_database_id
 		from
 			library_tracks
 	),
 	dj_playlists as ( -- List of all DJ Playlists
 		select 
-			playlist_id
+			playlist_id, playlist_name
 		from 
-			playlists p 
+			itunes.playlists p 
 		where 
 			p.name not in (
 				'Library', 'Downloaded',
@@ -47,7 +50,7 @@ with
 			lt.name, lt.track_number, 
 			lt.location, lt.total_time
 		from 
-			playlist_track_mapping ptm 
+			itunes.playlist_track_mapping ptm 
 		left join 
 			dj_playlists dpl
 		on
@@ -55,7 +58,7 @@ with
 		left join
 			clean_library_tracks lt 
 		on
-			ptm.track_id = lt.track_id
+			ptm.track_id = lt.track_database_id
 		where 
 			dpl.playlist_id is not null
 		and 
@@ -194,13 +197,13 @@ with
 		select * from bcamp_matches -- 130
 	)
 select distinct
-	ptm.playlist_id, tm.track_id, tm.aif_id
+	tpm.playlist_id, tm.track_id, tm.aif_id
 from
 	total_matches tm
 left join
-	playlist_track_mapping ptm
+	itunes.playlist_track_mapping tpm
 on
-	ptm.track_id = tm.track_id
+	tpm.track_id = tm.track_id
 where
 	tm.track_id is not null;
 

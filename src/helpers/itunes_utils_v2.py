@@ -48,7 +48,7 @@ class ITunesLibrary():
             track = tracks.Item(i)
             try:    
                 track_dict = {
-                    'track_id': track.TrackDatabaseID,
+                    'track_id': track.trackID,
                     'name': track.Name,
                     'artist': track.Artist,
                     'album': track.Album,
@@ -56,6 +56,10 @@ class ITunesLibrary():
                     'location': track.Location,
                     'track_number': track.TrackNumber,
                     'total_time': track.Time,
+                    'source_id': track.sourceID,
+                    'playlist_id': track.playlistID,
+                    'track_database_id': track.TrackDatabaseID
+
                 }
                 track_data.append(track_dict)
             except:
@@ -80,7 +84,7 @@ class ITunesLibrary():
                 plist_mapping = {
                     'playlist_id': plist_id,
                     'plist_name': playlist.Name,
-                    'track_id': plist_track.TrackDatabaseID,
+                    'track_id': plist_track.trackID,
                     'track_name': plist_track.Name
                 }
                 plist_mappings.append(plist_mapping)
@@ -130,7 +134,73 @@ class ITunesLibrary():
                                                     match['aif_id'])
             print(f"name: {plist.Name}")
             print(f"new track: {new_track.Name}")
-
+            # include the various object IDs in the data
             #       plist = self.itunes.GetITObjectByID(None,
             #       File "<COMObject iTunes.Application>", line 2, in GetITObjectByID
             #       TypeError: int() argument must be a string, a bytes-like object or a number, not 'NoneType'
+
+    def test_playlist_operations(self):
+        playlists = self.itunes.LibrarySource.Playlists
+        p_count = playlists.Count
+        for i in range(1, p_count+1):
+            if playlists.Item(i).Name == 'test_playlist':
+                print(i)
+                print(playlists.Item(i).Name)
+                test_playlist = playlists.Item(i)
+                print(test_playlist.Tracks.Count)
+                tp_pids = self.itunes.GetITObjectPersistentIDs(test_playlist)
+                print(tp_pids)
+        print('Library Tracks')
+        library_tracks = self.itunes.LibraryPlaylist.Tracks
+        lt_count = library_tracks.Count
+        at_oids = []
+        for i in range(1, lt_count+1):
+            track = library_tracks.Item(i)
+            if track.Name == 'SUSMAN=V2':
+                t_oid = track.GetITObjectIDs()
+                kind = track.KindAsString
+                if kind == 'AIFF audio file':
+                    added_track = test_playlist.AddTrack(track)
+                    at_oid = added_track.GetITObjectIDs()
+                    at_oids.append(at_oid)
+                    print(f"Track added, {test_playlist.Tracks.Count}")
+
+                    print("Add Track to test playlist", added_track.Name, added_track.GetITObjectIDs(), added_track.KindAsString, added_track.Playlist.Name, at_oid, t_oid)
+        print(tp_pids)
+        print(playlists.Count)
+        test_playlist = playlists.ItemByName('test_playlist')
+        print(test_playlist.Tracks.Count)
+        play_lists = []
+        tp_count = test_playlist.Tracks.Count
+        print("Test Playlist")
+        oids = []
+        for i in range(1, tp_count+1):
+            print(test_playlist.Name, test_playlist.playlistID)
+            track = test_playlist.Tracks.Item(i)
+            oid = track.GetITObjectIDs()
+            oids.append(oid)
+            print(f"run delete")
+            print("Track to delete: ", track.Name, oid, track.KindAsString, track.Playlist.Name)
+            play_lists.append((track.sourceID, track.playlistID, 0, 0))
+        
+        
+        deleted_oids = []
+        for oid in oids:
+            track = self.itunes.GetITObjectByID(*oid)
+            track.Delete() # removes track from playlist
+            # library_ttrack.Delete() # removes track from library
+
+        for play_list in playlists:
+            if play_list.playlistID in play_lists:
+                print(play_list.Name)
+
+        library_tracks = self.itunes.LibraryPlaylist.Tracks
+        lt_count = library_tracks.Count
+        print("remaining tracks")
+        for i in range(1, lt_count+1):
+            track = library_tracks.Item(i)
+            t_pid = self.itunes.GetITObjectPersistentIDs(track)
+            if track.Name == 'SUSMAN=V2':
+                print(track.Name, track.sourceID, track.playlistID, track.trackID, track.TrackDatabaseID, track.KindAsString, t_pid)
+
+        
