@@ -30,9 +30,9 @@ with
 	),
 	dj_playlists as ( -- List of all DJ Playlists
 		select 
-			playlist_id, playlist_name
+			playlist_id, name, source_id
 		from 
-			itunes.playlists p 
+			playlists p 
 		where 
 			p.name not in (
 				'Library', 'Downloaded',
@@ -45,12 +45,15 @@ with
 	),
 	dj_plist_tracks as ( -- All Tracks in DJ Playlists excluding AIFF, purchased, and Apple music files
 		select distinct
+			ptm.track_database_id,
 			ptm.track_id,
+			ptm.playlist_id as track_playlist_id,
+			ptm.track_source_id,
 			lt.artist, lt.album, 
 			lt.name, lt.track_number, 
 			lt.location, lt.total_time
 		from 
-			itunes.playlist_track_mapping ptm 
+			playlist_track_mapping ptm 
 		left join 
 			dj_playlists dpl
 		on
@@ -58,7 +61,7 @@ with
 		left join
 			clean_library_tracks lt 
 		on
-			ptm.track_id = lt.track_database_id
+			ptm.track_database_id = lt.track_database_id
 		where 
 			dpl.playlist_id is not null
 		and 
@@ -71,13 +74,19 @@ with
 	),
 	aifs as ( -- aif tracks in library with Bandcamp filename
 		select 
-			track_id, artist, 
-			album, name, 
-			track_number, location, 
-			total_time,
+			track_database_id as aif_database_id, 
+			track_id as aif_track_id, 
+			playlist_id as aif_playlist_id, 
+			source_id as aif_source_id,
+			artist as aif_artist, 
+			album as aif_album, 
+			name as aif_name, 
+			track_number as aif_track_number, 
+			location as aif_location, 
+			total_time as aif_total_time,
 			concat(
 				artist,' - ',album,' - ',track_number,' ',name
-			) as bcamp_name
+			) as aif_bcamp_name
 		from 
 			clean_library_tracks lt 
 		where
@@ -86,105 +95,81 @@ with
 	exact_matches as ( -- 173 - Match on artist, album, and name
 		select distinct
 			dpt.*,
-			a.track_id as aif_id,
-			a.bcamp_name,
-			a.location as aif_location,
-			a.artist as aif_artist,
-			a.album as aif_album,
-			a.name as aif_name,
-			a.total_time as aif_time,
+			a.*,
 			'exact_match' as match_type
 		from
 			dj_plist_tracks dpt
 		left join
 			aifs a
 		on
-			dpt.name = a.name and dpt.artist = a.artist and dpt.album = a.album
+			dpt.name = a.aif_name and dpt.artist = a.aif_artist and dpt.album = a.aif_album
 		where
-			a.track_id is not null 
+			a.aif_database_id is not null 
 	),
 	exact_artist_name_matches as ( -- 10 - Match on artist and name
 		select distinct
 			dpt.*,
-			a.track_id as aif_id,
-			a.bcamp_name,
-			a.location as aif_location,
-			a.artist as aif_artist,
-			a.album as aif_album,
-			a.name as aif_name,
-			a.total_time as aif_time,
+			a.*,
 			'exact_artist_name_match' as match_type
 		from
 			dj_plist_tracks dpt
 		left join
 			aifs a
 		on
-			dpt.name = a.name and dpt.artist = a.artist
+			dpt.name = a.aif_name and dpt.artist = a.aif_artist
 		where
-			a.track_id is not null
+			a.aif_database_id is not null
 		and
-			dpt.track_id not in (
-				select track_id from exact_matches
+			dpt.track_database_id not in (
+				select track_database_id from exact_matches
 			)
 	),
 	name_matches as ( -- 156 - exact match on name or name with track number
 		select distinct
 			dpt.*,
-			a.track_id as aif_id,
-			a.bcamp_name,
-			a.location as aif_location,
-			a.artist as aif_artist,
-			a.album as aif_album,
-			a.name as aif_name,
-			a.total_time as aif_time,
+			a.*,
 			'name_match' as match_type
 		from
 			dj_plist_tracks dpt
 		left join
 			aifs a
 		on
-			a.name = dpt.name 
-		or
-			dpt.name = concat(a.track_number, ' ', a.name)
-		or
-			a.name = concat(dpt.artist, ' - ', dpt.name)
+				a.aif_name = dpt.name 
+			or
+				dpt.name = concat(a.aif_track_number, ' ', a.aif_name)
+			or
+				a.aif_name = concat(dpt.artist, ' - ', dpt.name)
 		where
-			a.track_id is not null
+			a.aif_database_id is not null
 		and
-			dpt.track_id not in (
-				select track_id from exact_matches
+			dpt.track_database_id not in (
+				select track_database_id from exact_matches
 				union all
-				select track_id from exact_artist_name_matches
+				select track_database_id from exact_artist_name_matches
 			)
 	),
 	bcamp_matches as ( -- 153 - Match on (potentially truncated) bandcamp file name (`artist - album - song`)
 		select distinct
 			dpt.*,
-			a.track_id as aif_id,
-			a.bcamp_name,
-			a.location as aif_location,
-			a.artist as aif_artist,
-			a.album as aif_album,
-			a.name as aif_name,
-			a.total_time as aif_time,
+			a.*,
 			'bandcamp_name_match' as match_type
 		from
 			dj_plist_tracks dpt
 		left join
 			aifs a
 		on
-				left(a.bcamp_name, length(dpt.name)) = dpt.name
+				left(a.aif_bcamp_name, length(dpt.name)) = dpt.name
 			or
-				left(a.bcamp_name, (length(dpt.name)-2)) = left(dpt.name, (length(dpt.name)-2))
+				left(a.aif_bcamp_name, (length(dpt.name)-2)) = left(dpt.name, (length(dpt.name)-2))
 		where
-			a.track_id is not null
+			a.aif_database_id is not null
 		and
-			dpt.track_id not in (
-				select track_id from exact_matches
+			dpt.track_database_id not in (
+				select track_database_id from exact_matches
 				union all
-				select track_id from exact_artist_name_matches
+				select track_database_id from exact_artist_name_matches
 				union all
-				select track_id from name_matches
+				select track_database_id from name_matches
 			)
 	),
 	total_matches as ( -- 492 - 33 unmatched - 
@@ -197,14 +182,23 @@ with
 		select * from bcamp_matches -- 130
 	)
 select distinct
-	tpm.playlist_id, tm.track_id, tm.aif_id
+	ptm.playlist_id, 
+	p.name as playlist_name, 
+	p.source_id as playlist_source_id, 
+	tm.*
 from
 	total_matches tm
 left join
-	itunes.playlist_track_mapping tpm
+	playlist_track_mapping ptm
 on
-	tpm.track_id = tm.track_id
+	ptm.track_database_id = tm.track_database_id
+left join 
+	dj_playlists p
+on
+	p.playlist_id = ptm.playlist_id
 where
-	tm.track_id is not null;
+	tm.track_database_id is not null
+and
+	p.playlist_id is not null;
 
 --select * from dj_plist_tracks;
