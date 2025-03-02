@@ -240,9 +240,12 @@ class ITunesLibrary():
         total_added = len(new_plist_tracks)
         total_deleted = len(deleted_plist_tracks)
         print(f"{total_added} objects added to iTunes DB, {total_deleted} deleted")
+        
 
-    def delete_matched_library_tracks(self):
+    def delete_matched_library_tracks(self, dry_run: bool = True):
+        deleted_tracks = []
         for idx, match_row in self.matches:
+            # TODO: Validate that the matched track has been replaced with the aif
             plist_track_oid = (
                 match_row['track_source_id'],
                 match_row['track_playlist_id'],
@@ -252,8 +255,29 @@ class ITunesLibrary():
             plist_track = self.itunes.GetITObjectByID(
                 *plist_track_oid
             )
-            plist_track_pid = self.itunes.GetITObjectPersistentIDs(plist_track)
-
+            lp_track = self.get_lib_track(plist_track)
+            lpt_name = lp_track.Name
+            lpt_kind = lp_track.KindAsString
+            lpt_oids = lp_track.GetITObjectIDs()
+            if dry_run:
+                print("dry_run = True | Skipping Deleting Track")
+            else:
+                print(f"Deleting {lpt_name} from Library Playlist")
+                lp_track.Delete()
+            
+            deleted_tracks.append(lpt_oids)
+            print(f"Deleted Track {lpt_name} ({lpt_kind}, {lpt_oids})")
+        
+        total_deleted = len(deleted_tracks)
+        print(f"{total_deleted} Matched Tracks removed from Library Playlist")
+        
+        data_dir = './src/data/'
+        file_timestamp = datetime.now().strftime("%Y%m%d%H%M")
+        file_name = f"{data_dir}matched_deleted-{file_timestamp}.csv"
+        log_path = Path(file_name)
+        with open(log_path, 'w') as f:
+            f.writelines(deleted_tracks)
+            print(f"Delete actions logged: {log_path.absolute()}")
 
     # def test_playlist_operations(self):
     #     playlists = self.itunes.LibrarySource.Playlists
