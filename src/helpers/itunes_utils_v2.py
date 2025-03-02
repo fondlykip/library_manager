@@ -239,7 +239,7 @@ class ITunesLibrary():
         
         total_added = len(new_plist_tracks)
         total_deleted = len(deleted_plist_tracks)
-        print(f"{total_added} objects added to iTunes DB, {total_deleted} deleted")
+        print(f"{total_added} objects added to iTunes DB, {total_deleted} deleted from playlists")
         
 
     def delete_matched_library_tracks(self, dry_run: bool = True):
