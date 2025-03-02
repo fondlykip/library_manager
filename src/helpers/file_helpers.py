@@ -40,7 +40,7 @@ def get_folders(path: Path,
                           True: returns lists of path objects
                           False: reutrns lists of file names
     Returns:
-        ouput_folders (list): A list of folders available 
+        output_folders (list): A list of folders available 
                               at the Path"""
     log_id = f"{__name__}.get_folders"
     logging.debug(f"get folders for {path}")
@@ -77,7 +77,7 @@ def get_files(path: Path,
         path (str): the path for which we want to get
                     a list of files
     Returns:
-        ouput_folders (list): A list of files available 
+        output_folders (list): A list of files available 
                               at the Path"""
     obj_list = path.iterdir()
     found_files = []
@@ -128,7 +128,7 @@ def extract_file(file: Path,
         output_path = Path(str(file.absolute())[:-4])
     else:
         output_path = Path(str(output_path.absolute())).joinpath(file.name[:-4])
-        logging.info(f"ouput to {output_path.absolute()}")
+        logging.info(f"output to {output_path.absolute()}")
     
     _ = output_path.mkdir(exist_ok=True)
 
