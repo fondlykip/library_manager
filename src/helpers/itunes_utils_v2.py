@@ -105,7 +105,7 @@ class ITunesLibrary():
                 persistent IDs: {plist_track_pid}
                """)
         lp_tracks = self.itunes.LibraryPlaylist.Tracks
-        lpt = lp_tracks.ItemByPersistentID(plist_track_pid)
+        lpt = lp_tracks.ItemByPersistentID(*plist_track_pid)
         lpt_pid = self.itunes.GetITObjectPersistentIDs(lpt)
         lpt_name = lpt.Name
         lpt_kind = lpt.KindAsString
@@ -117,14 +117,13 @@ class ITunesLibrary():
         return lpt
 
     def run_matching(self):
-            library_tracks = self.library_tracks
-            playlists = self.playlists
-            playlist_track_mapping = self.playlist_track_mapping
-            with open('./src/sql/matching_ddb.sql', 'r') as f:
-                query = f.read()
-            #print(query)
-            self.matches = duckdb.query(query).to_df()
-            return len(self.matches.index)
+        library_tracks = self.library_tracks
+        playlists = self.playlists
+        playlist_track_mapping = self.playlist_track_mapping
+        with open('./src/sql/matching_ddb.sql', 'r') as f:
+            query = f.read()
+        self.matches = duckdb.query(query).to_df()
+        return len(self.matches.index)
 
 
     def export_csvs(self, output_path: Path):
@@ -132,7 +131,7 @@ class ITunesLibrary():
         export_list = [
             (k, var)\
              for k, var in self.__dict__.items()\
-             if type(var) == type(pd.DataFrame())
+             if isinstance(var, pd.DataFrame)
         ]
         for key, df in export_list:
             if df.shape[0] > 0:
