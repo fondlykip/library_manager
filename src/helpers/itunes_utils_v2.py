@@ -96,6 +96,25 @@ class ITunesLibrary():
         print("playlist and track mapping created")
         return True
 
+    def get_lib_track(self, plist_track):
+        plist_track_oid = plist_track.GetITObjectIDs()
+        plist_track_pid = self.itunes.GetITObjectPersistentIDs(plist_track)
+        pt_name = plist_track.Name
+        print(f"""Playlist Track: {pt_name}
+                object IDs (src ID, plist ID, trk ID, trk db ID): {plist_track_oid}
+                persistent IDs: {plist_track_pid}
+               """)
+        lp_tracks = self.itunes.LibraryPlaylist.Tracks
+        lpt = lp_tracks.ItemByPersistentID(plist_track_pid)
+        lpt_pid = self.itunes.GetITObjectPersistentIDs(lpt)
+        lpt_name = lpt.Name
+        lpt_kind = lpt.KindAsString
+        lpt_oids = lpt.GetITObjectIDs()
+        print(f"""Library Track: {lpt_name} ({lpt_kind})
+                object IDs (src ID, plist ID, trk ID, trk db ID): {lpt_oids}
+                persistent IDs: {lpt_pid}
+               """)
+        return lpt
 
     def run_matching(self):
             library_tracks = self.library_tracks
