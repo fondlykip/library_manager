@@ -40,7 +40,8 @@ with
 				'Movies', 'Downloaded',
 				'TV Shows', 'Podcasts',
 				'Audiobooks', 'Purchased',
-				'Unplaylisted', 'zzzzz Dumping ground pre 2025'
+				'Unplaylisted', 'zzzzz Dumping ground pre 2025',
+				'AngeldÆliteXspekkiWebuXRaum', 'SHERELLExRAUM', 'Home Videos'
 			)
 	),
 	dj_plist_tracks as ( -- All Tracks in DJ Playlists excluding AIFF, purchased, and Apple music files
